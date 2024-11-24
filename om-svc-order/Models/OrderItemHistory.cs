@@ -8,8 +8,6 @@ namespace om_svc_order.Models
 
         [Required]
         public Guid OrderId { get; set; }
-        [Required]
-        public Guid OrderItemId { get; set; }
 
         [Required]
         public Guid ItemId { get; set; }

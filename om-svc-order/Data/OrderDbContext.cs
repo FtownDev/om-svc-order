@@ -35,10 +35,10 @@ namespace om_svc_order.Data
                    v => JsonConvert.DeserializeObject<List<TimeSpan>>(v))); 
         }
 
-        public int SaveChangesWithTracking(Guid user)
+        public async Task<int> SaveChangesWithTracking(Guid user)
         {
             TrackOrderChanges<Order>(user);
-            return base.SaveChanges();
+            return await base.SaveChangesAsync();
         }
 
         private void TrackOrderChanges<TEntity>(Guid userId) where TEntity : class   

@@ -50,7 +50,6 @@ namespace om_svc_order.Models
         [Column(TypeName = "decimal(10,2)")]
         public decimal Discount { get; set; }
 
-        [Required]
         public OrderStatus CurrentStatus { get; set; }
 
         [Required]
