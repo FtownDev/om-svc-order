@@ -38,9 +38,9 @@ namespace om_svc_order.Models
         [Column(TypeName = "decimal(3,2)")]
         public decimal TaxRate { get; set; }
 
-        public IList<(DateTime Start, DateTime End)> DeliveryWindow { get; set; } 
+        public List<List<DateTime>> DeliveryWindow { get; set; } 
 
-        public IList<(DateTime Start, DateTime End)> PickupWindow { get; set; }
+        public List<List<DateTime>> PickupWindow { get; set; }
 
         public string DeliveryPickupNotes { get; set; }
 

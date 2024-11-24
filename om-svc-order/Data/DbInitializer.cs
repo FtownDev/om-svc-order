@@ -16,7 +16,7 @@ namespace om_svc_order.Data
         {
             context.Database.Migrate();
 
-            if (context.EventTypes.Any())
+            if (context.Orders.Any())
             {
                 Console.WriteLine("Already have data- skipping seed data");
                 return;
@@ -56,6 +56,12 @@ namespace om_svc_order.Data
                 }
             };
 
+            List<List<DateTime>> deliveryWindowList = new();
+            List<DateTime> deliveryWindow1 = [ DateTime.Now.AddDays(-2), DateTime.UtcNow];
+            List<DateTime> deliveryWindow2 = [ DateTime.UtcNow.AddDays(-5),  DateTime.UtcNow.AddDays(-4)];
+            deliveryWindowList.Add(deliveryWindow1);
+            deliveryWindowList.Add(deliveryWindow2);
+
             var orders = new List<Order>
             {
                 new Order
@@ -64,7 +70,7 @@ namespace om_svc_order.Data
                     BilledToCustomerId = Guid.Parse("cb831f1f-f5c9-4b9d-bd81-207fb33f0e80"),
                     BilledToAddressId = Guid.Parse("92389934-e6f4-4e0e-bf51-76aff0bd3c18"),
                     Created = DateTime.UtcNow,
-                    EventTypeId = eventTypes.FirstOrDefault(e => e.Name == "Graduation").Id,
+                    EventTypeId = Guid.Parse("76395669-5671-4af6-816e-5429a193720b"),
                     EventDate = DateTime.UtcNow.AddDays(1),
                     ShippedToAddressId = Guid.Parse("92389934-e6f4-4e0e-bf51-76aff0bd3c18"),
                     Amount = new decimal(150.32),
@@ -74,18 +80,7 @@ namespace om_svc_order.Data
                     CurrentStatus = OrderStatus.InProgress,
                     PaymentTerms = PaymentTerms.Net30,
                     Deposit = new decimal(0.00),
-                    DeliveryWindow = new List<(DateTime Start , DateTime End)>(){
-                        new()
-                        {
-                            Start = DateTime.UtcNow.AddDays(-2),
-                            End = DateTime.UtcNow,
-                        },
-                        new()
-                        {
-                            Start = DateTime.UtcNow.AddDays(-5),
-                            End = DateTime.UtcNow.AddDays(-4),
-                        },
-                    },
+                    DeliveryWindow = deliveryWindowList,
                 }
             };
 
@@ -96,7 +91,7 @@ namespace om_svc_order.Data
                     Id= Guid.NewGuid(),
                     OrderId = orders.FirstOrDefault().Id,
                     ItemId = new Guid("4c6fda94-34de-4fc8-889d-49c1b8d778c6"),
-                    Qty = 1
+                    Qty = 1,
                 },
                 new OrderItem
                 {

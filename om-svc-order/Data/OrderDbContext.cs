@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Newtonsoft.Json;
 using om_svc_order.Models;
+using System.Text.Json;
 
 namespace om_svc_order.Data
 {
@@ -18,22 +19,30 @@ namespace om_svc_order.Data
         public DbSet<OrderItemHistory> OrderItemHistory { get; set; }
 
         public DbSet<OrderHistory> OrderHistory {  get; set; }
-
+        
+         
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // Configure the value converter for the Animal
-            modelBuilder.Entity<Order>()
-                .Property(x => x.DeliveryWindow)
-                .HasConversion(new ValueConverter<List<TimeSpan>, string>(
-                    v => JsonConvert.SerializeObject(v),
-                    v => JsonConvert.DeserializeObject<List<TimeSpan>>(v))); 
+            modelBuilder.Entity<Order>(entity =>
+            {
+                entity.Property(e => e.DeliveryWindow)
+                    .IsRequired(false)
+                    .HasConversion(
+                        v => JsonConvert.SerializeObject(v),
+                        v => JsonConvert.DeserializeObject<List<List<DateTime>>>(v) ?? new List<List<DateTime>>()
+                    )
+                    .HasColumnType("json");
 
-            modelBuilder.Entity<Order>()
-               .Property(x => x.PickupWindow)
-               .HasConversion(new ValueConverter<List<TimeSpan>, string>(
-                   v => JsonConvert.SerializeObject(v), 
-                   v => JsonConvert.DeserializeObject<List<TimeSpan>>(v))); 
+                entity.Property(e => e.PickupWindow)
+                    .IsRequired(false)
+                    .HasConversion(
+                        v => JsonConvert.SerializeObject(v),
+                        v => JsonConvert.DeserializeObject<List<List<DateTime>>>(v) ?? new List<List<DateTime>>()
+                    )
+                    .HasColumnType("json");
+            });
         }
+        
 
         public async Task<int> SaveChangesWithTracking(Guid user)
         {

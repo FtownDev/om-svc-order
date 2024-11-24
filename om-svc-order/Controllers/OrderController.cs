@@ -30,6 +30,7 @@ namespace om_svc_order.Controllers
            .Take(pageSize)
            .ToListAsync();
 
+
             if (!orderList.Any() || orderList.Count == 0)
             {
                 retval = this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to find orders");
@@ -55,9 +56,7 @@ namespace om_svc_order.Controllers
         {
             ActionResult retval;
 
-            var orderList = await this._context.Orders.OrderBy(x => x.EventDate)
-           .ThenBy(b => b.Id)
-           .Where(o => o.BilledToCustomerId == customerId)
+            var orderList = await this._context.Orders.Where(o => o.BilledToCustomerId == customerId)
            .ToListAsync();
 
             if (!orderList.Any() || orderList.Count == 0)
@@ -66,7 +65,7 @@ namespace om_svc_order.Controllers
             }
             else
             {
-                retval = Ok(orderList);
+                retval = Ok(orderList.OrderByDescending(x => x.EventDate).ThenBy(b => b.Id));
             }
 
             return retval;
@@ -79,7 +78,7 @@ namespace om_svc_order.Controllers
             ActionResult retval;
 
             var orderList = await this._context.Orders.OrderBy(x => x.Id)
-           .Where(o => o.EventDate == date)
+           .Where(o => o.EventDate.Date == date.Date)
            .ToListAsync();
 
             if (!orderList.Any() || orderList.Count == 0)
@@ -107,10 +106,10 @@ namespace om_svc_order.Controllers
             else
             {
                 var orderList = await this._context.Orders.OrderBy(x => x.Id)
-                  .Where(o => o.EventDate > startDate && o.EventDate < endDate)
+                  .Where(o => o.EventDate.Date > startDate.Date && o.EventDate.Date < endDate.Date)
                   .ToListAsync();
 
-                retval = Ok(orderList);
+                retval = Ok(orderList.OrderBy(o => o.CurrentStatus));
 
             }
 
@@ -126,6 +125,8 @@ namespace om_svc_order.Controllers
 
             orderRequest.order.Id = Guid.NewGuid();
             orderRequest.order.EventDate = date;
+            orderRequest.order.CurrentStatus = OrderStatus.Confirmed;
+
 
             this._context.Orders.Add(orderRequest.order);
             List<OrderItem> orderItems = new List<OrderItem>();
@@ -140,7 +141,7 @@ namespace om_svc_order.Controllers
                 });
             }
 
-            this._context.OrderItems.AddRange(orderItems);
+            await this._context.OrderItems.AddRangeAsync(orderItems);
 
             var result = await this._context.SaveChangesAsync() > 0;
             if (!result)
