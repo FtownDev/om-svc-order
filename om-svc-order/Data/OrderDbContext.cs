@@ -64,8 +64,8 @@ namespace om_svc_order.Data
                         {
                             var history = new OrderHistory
                             {
-                                Id = entry.Entity.Id,
-                                
+                                Id = Guid.NewGuid(),
+                                OrderId = entry.Entity.Id,
                                 PropertyName = property.Metadata.Name,
                                 ChangedFrom = property.OriginalValue?.ToString(),
                                 ChangedTo = property.CurrentValue?.ToString(),

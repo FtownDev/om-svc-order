@@ -125,7 +125,8 @@ namespace om_svc_order.Controllers
 
             orderRequest.order.Id = Guid.NewGuid();
             orderRequest.order.EventDate = date;
-            orderRequest.order.CurrentStatus = OrderStatus.Confirmed;
+            orderRequest.order.Created = DateTime.UtcNow;
+            //orderRequest.order.CurrentStatus = OrderStatus.Confirmed;
 
 
             this._context.Orders.Add(orderRequest.order);
@@ -160,6 +161,7 @@ namespace om_svc_order.Controllers
         public async Task<IActionResult> UpadateOrder([FromBody] Order updatedOrder, [FromQuery] Guid userId)
         {
             IActionResult retval;
+            bool result = false;
 
             var oldOrder = await this._context.Orders.FirstOrDefaultAsync(o => o.Id == updatedOrder.Id);
             if (oldOrder == null)
@@ -171,11 +173,11 @@ namespace om_svc_order.Controllers
                 // Update Order will utilize the override TrackChanges method written in DbContext file
                 // This is because we want to track Order history changes, but dont want to manage the table and columns, etc
                 // hopefully it "just works"
-                oldOrder = updatedOrder;
-                var result = await this._context.SaveChangesWithTracking(userId) > 0;
+                this._context.Entry(oldOrder).CurrentValues.SetValues(updatedOrder);
+                result = await this._context.SaveChangesWithTracking(userId) > 0;
             }
 
-            retval = this.Ok(updatedOrder);
+            retval = result ? this.Ok(updatedOrder) : this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to update order");
 
             return retval;
         }
@@ -228,7 +230,7 @@ namespace om_svc_order.Controllers
                                 Id = Guid.NewGuid(),
                                 ChangedByUserId = userId,
                                 ItemId = item.itemId,
-                                ChangedDate = DateTime.Now,
+                                ChangedDate = DateTime.UtcNow,
                                 ChangeType = item.changeType,
                                 OldQuantity = existingItem.Qty,
                                 NewQuantity = item.qty,
@@ -258,7 +260,7 @@ namespace om_svc_order.Controllers
                             Id = Guid.NewGuid(),
                             ChangedByUserId = userId,
                             ItemId = item.itemId,
-                            ChangedDate = DateTime.Now,
+                            ChangedDate = DateTime.UtcNow,
                             ChangeType = item.changeType,
                             OldQuantity = 0,
                             NewQuantity = item.qty,
@@ -279,7 +281,7 @@ namespace om_svc_order.Controllers
                                 Id = Guid.NewGuid(),
                                 ChangedByUserId = userId,
                                 ItemId = item.itemId,
-                                ChangedDate = DateTime.Now,
+                                ChangedDate = DateTime.UtcNow,
                                 ChangeType = item.changeType,
                                 OldQuantity = itemToDelete.Qty,
                                 NewQuantity = 0,
@@ -309,6 +311,10 @@ namespace om_svc_order.Controllers
             {
                 _context.OrderItems.RemoveRange(itemsToDelete);
             }
+            if (itemHistory.Any())
+            {
+                await this._context.OrderItemHistory.AddRangeAsync(itemHistory);
+            }
 
             var result = await this._context.SaveChangesAsync() > 0;
 
@@ -323,6 +329,28 @@ namespace om_svc_order.Controllers
 
             return retval;
 
+        }
+
+        [HttpGet]
+        [Route("{orderId}/items")]
+        public async Task<IActionResult> GetOrderItemsByOrderId([FromRoute] Guid orderId)
+        {
+            IActionResult retval;
+
+            // verify order exists
+            var order = this._context.Orders.FirstOrDefault(o => o.Id == orderId);
+
+            if(order == null) 
+            {
+                retval = this.BadRequest("Order does not exist");
+            }
+            else
+            {
+                var orderItems = await this._context.OrderItems.Where(o => o.OrderId == orderId).ToListAsync();
+                retval = this.Ok(orderItems);
+            }
+
+            return retval;
         }
 
         [HttpGet]
