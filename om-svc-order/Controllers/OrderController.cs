@@ -77,9 +77,10 @@ namespace om_svc_order.Controllers
         {
             ActionResult retval;
 
-            var orderList = await this._context.Orders.OrderBy(x => x.Id)
-           .Where(o => o.EventDate.Date == date.Date)
-           .ToListAsync();
+            var orderList = await this._context.Orders
+               .Where(o => o.EventDate.Date == date.Date)
+               .OrderBy(x => x.Id)
+               .ToListAsync();
 
             if (!orderList.Any() || orderList.Count == 0)
             {
@@ -200,6 +201,24 @@ namespace om_svc_order.Controllers
 
                 retval = await this._context.SaveChangesAsync() > 0 ? this.Ok() : this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to delete order");
             }
+
+            return retval;
+        }
+
+        [HttpGet]
+        [Route("{orderId}/history")]
+        public async Task<IActionResult> GetOrderHistory([FromRoute] Guid orderId)
+        {
+            IActionResult retval;
+
+            List<OrderHistory> orderHistory = new();
+
+            orderHistory = await this._context.OrderHistory
+                .Where(h => h.OrderId == orderId)
+                .OrderByDescending(i => i.ChangedAt.Date)
+                .ToListAsync();
+
+            retval = this.Ok(orderHistory);
 
             return retval;
         }
@@ -331,6 +350,7 @@ namespace om_svc_order.Controllers
 
         }
 
+
         [HttpGet]
         [Route("{orderId}/items")]
         public async Task<IActionResult> GetOrderItemsByOrderId([FromRoute] Guid orderId)
@@ -349,6 +369,24 @@ namespace om_svc_order.Controllers
                 var orderItems = await this._context.OrderItems.Where(o => o.OrderId == orderId).ToListAsync();
                 retval = this.Ok(orderItems);
             }
+
+            return retval;
+        }
+
+        [HttpGet]
+        [Route("{orderId}/items/history")]
+        public async Task<IActionResult> GetOrderItemHistory([FromRoute] Guid orderId)
+        {
+            IActionResult retval;
+
+            List<OrderItemHistory> itemHistory = new();
+
+            itemHistory = await this._context.OrderItemHistory
+                .Where(h => h.OrderId == orderId)
+                .OrderByDescending(i => i.ChangedDate)
+                .ToListAsync();
+
+            retval = this.Ok(itemHistory);
 
             return retval;
         }
