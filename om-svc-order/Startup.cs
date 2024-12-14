@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using om_svc_order.Data;
+using om_svc_order.Services;
 
 namespace om_svc_order
 {
@@ -22,6 +23,14 @@ namespace om_svc_order
             services.AddControllers();
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen();
+
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = Configuration.GetConnectionString("RedisCache");
+                options.InstanceName = "Orders_";
+            });
+
+            services.AddScoped<ICacheService, RedisCacheService>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

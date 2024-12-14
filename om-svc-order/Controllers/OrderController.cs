@@ -3,7 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using om_svc_order.Data;
 using om_svc_order.DTO;
 using om_svc_order.Models;
+using om_svc_order.Services;
+using StackExchange.Redis;
 using System.Net;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace om_svc_order.Controllers
 {
@@ -12,10 +15,12 @@ namespace om_svc_order.Controllers
     public class OrderController : ControllerBase
     {
         private readonly OrderDbContext _context;
+        private readonly ICacheService _cacheService;
 
-        public OrderController(OrderDbContext context)
+        public OrderController(OrderDbContext context, ICacheService cache)
         {
             this._context = context;
+            this._cacheService = cache;
         }
 
         [HttpGet]
@@ -24,27 +29,37 @@ namespace om_svc_order.Controllers
         {
             ActionResult retval;
 
-            var orderList = await this._context.Orders.OrderBy(x => x.EventDate)
-           .ThenBy(b => b.Id)
-           .Skip(currentNumber)
-           .Take(pageSize)
-           .ToListAsync();
+            var cacheList = _cacheService.GetData<IEnumerable<Order>>(key: $"all{pageSize}/{currentNumber}");
 
-
-            if (!orderList.Any() || orderList.Count == 0)
+            if (cacheList != null)
             {
-                retval = this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to find orders");
+                retval = this.Ok(cacheList);
             }
             else
             {
-                var responseData = new OrderRetrieveResponse
-                {
-                    pageSize = pageSize,
-                    totalCount = currentNumber + pageSize,
-                    orders = orderList
-                };
+                var orderList = await this._context.Orders.OrderBy(x => x.EventDate)
+                   .ThenBy(b => b.Id)
+                   .Skip(currentNumber)
+                   .Take(pageSize)
+                   .ToListAsync();
 
-                retval = Ok(responseData);
+
+                if (!orderList.Any() || orderList.Count == 0)
+                {
+                    retval = this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to find orders");
+                }
+                else
+                {
+                    var responseData = new OrderRetrieveResponse
+                    {
+                        pageSize = pageSize,
+                        totalCount = currentNumber + pageSize,
+                        orders = orderList
+                    };
+                    _cacheService.SetData($"all{pageSize}/{currentNumber}", responseData, 10);
+
+                    retval = Ok(responseData);
+                }
             }
 
             return retval;
@@ -56,16 +71,28 @@ namespace om_svc_order.Controllers
         {
             ActionResult retval;
 
-            var orderList = await this._context.Orders.Where(o => o.BilledToCustomerId == customerId)
-           .ToListAsync();
+            var cacheList = _cacheService.GetData<IEnumerable<Order>>(key: $"{customerId}");
 
-            if (!orderList.Any() || orderList.Count == 0)
+            if (cacheList != null)
             {
-                retval = this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to find orders");
+                retval = this.Ok(cacheList);
             }
             else
             {
-                retval = Ok(orderList.OrderByDescending(x => x.EventDate).ThenBy(b => b.Id));
+                var orderList = await this._context.Orders.Where(o => o.BilledToCustomerId == customerId)
+                    .OrderByDescending(x => x.EventDate)
+                    .ThenBy(b => b.Id)
+                    .ToListAsync(); ;
+
+                if (!orderList.Any() || orderList.Count == 0)
+                {
+                    retval = this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to find orders");
+                }
+                else
+                {
+                    _cacheService.SetData($"{customerId}", orderList, 10);
+                    retval = Ok(orderList);
+                }
             }
 
             return retval;
@@ -77,18 +104,28 @@ namespace om_svc_order.Controllers
         {
             ActionResult retval;
 
-            var orderList = await this._context.Orders
-               .Where(o => o.EventDate.Date == date.Date)
-               .OrderBy(x => x.Id)
-               .ToListAsync();
+            var cacheList = _cacheService.GetData<IEnumerable<Order>>(key: $"date/{date}");
 
-            if (!orderList.Any() || orderList.Count == 0)
+            if (cacheList != null)
             {
-                retval = this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to find orders");
+                retval = this.Ok(cacheList);
             }
             else
             {
-                retval = Ok(orderList);
+                var orderList = await this._context.Orders
+                    .Where(o => o.EventDate.Date == date.Date)
+                    .OrderBy(x => x.Id)
+                    .ToListAsync();
+
+                if (!orderList.Any() || orderList.Count == 0)
+                {
+                    retval = this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to find orders");
+                }
+                else
+                {
+                    _cacheService.SetData($"date/{date}", orderList, 10);
+                    retval = Ok(orderList);
+                }
             }
 
             return retval;
@@ -106,12 +143,22 @@ namespace om_svc_order.Controllers
             }
             else
             {
-                var orderList = await this._context.Orders.OrderBy(x => x.Id)
-                  .Where(o => o.EventDate.Date > startDate.Date && o.EventDate.Date < endDate.Date)
-                  .ToListAsync();
+                var cacheList = _cacheService.GetData<IEnumerable<Order>>(key: $"dates/{startDate}-{endDate}");
 
-                retval = Ok(orderList.OrderBy(o => o.CurrentStatus));
+                if (cacheList != null)
+                {
+                    retval = this.Ok(cacheList);
+                }
+                else
+                {
+                    var orderList = await this._context.Orders.OrderBy(x => x.Id)
+                      .Where(o => o.EventDate.Date > startDate.Date && o.EventDate.Date < endDate.Date)
+                      .OrderBy(o => o.CurrentStatus)
+                      .ToListAsync();
 
+                    _cacheService.SetData($"dates/{startDate}-{endDate}", orderList, 10);
+                    retval = Ok(orderList);
+                }
             }
 
             return retval;
@@ -122,13 +169,11 @@ namespace om_svc_order.Controllers
         {
             IActionResult retval;
 
-            DateTime date = (DateTime)orderRequest.order.EventDate;
+            DateTime date = orderRequest.order.EventDate;
 
             orderRequest.order.Id = Guid.NewGuid();
             orderRequest.order.EventDate = date;
             orderRequest.order.Created = DateTime.UtcNow;
-            //orderRequest.order.CurrentStatus = OrderStatus.Confirmed;
-
 
             this._context.Orders.Add(orderRequest.order);
             List<OrderItem> orderItems = new List<OrderItem>();
@@ -152,6 +197,7 @@ namespace om_svc_order.Controllers
             }
             else
             {
+                _cacheService.InvalidateKeys(new List<string> { "all", $"date/{orderRequest.order.EventDate}" });
                 retval = Ok(orderRequest.order);
             }
 
@@ -176,9 +222,17 @@ namespace om_svc_order.Controllers
                 // hopefully it "just works"
                 this._context.Entry(oldOrder).CurrentValues.SetValues(updatedOrder);
                 result = await this._context.SaveChangesWithTracking(userId) > 0;
-            }
 
-            retval = result ? this.Ok(updatedOrder) : this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to update order");
+                if (!result)
+                {
+                    retval = this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to update order");
+                }
+                else
+                {
+                    this._cacheService.InvalidateKeys(new List<string> { "all", $"date/{updatedOrder.EventDate}" });
+                    retval = this.Ok(updatedOrder);
+                }
+            }
 
             return retval;
         }
@@ -197,9 +251,18 @@ namespace om_svc_order.Controllers
             }
             else
             {
+                DateTime date = orderToDelete.EventDate;
                 this._context.Orders.Remove(orderToDelete);
 
-                retval = await this._context.SaveChangesAsync() > 0 ? this.Ok() : this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to delete order");
+                if(await this._context.SaveChangesAsync() > 0)
+                {
+                    this._cacheService.InvalidateKeys(new List<string> { "all", $"date/{date}" });
+                    retval = this.Ok();
+                }
+                else
+                {
+                    retval = this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to delete order");
+                }
             }
 
             return retval;
@@ -211,14 +274,27 @@ namespace om_svc_order.Controllers
         {
             IActionResult retval;
 
-            List<OrderHistory> orderHistory = new();
+            var cacheList = _cacheService.GetData<IEnumerable<Order>>(key: $"{orderId}/history");
 
-            orderHistory = await this._context.OrderHistory
-                .Where(h => h.OrderId == orderId)
-                .OrderByDescending(i => i.ChangedAt.Date)
-                .ToListAsync();
+            if (cacheList != null)
+            {
+                retval = this.Ok(cacheList);
+            }
+            else
+            {
+                var orderHistory = await this._context.OrderHistory
+                    .Where(h => h.OrderId == orderId)
+                    .OrderByDescending(i => i.ChangedAt.Date)
+                    .ToListAsync();
 
-            retval = this.Ok(orderHistory);
+                if(orderHistory.Count > 0)
+                {
+                    this._cacheService.SetData($"{orderId}/history", orderHistory, 10);
+                }
+
+                retval = this.Ok(orderHistory);
+            }
+            
 
             return retval;
         }
@@ -339,6 +415,7 @@ namespace om_svc_order.Controllers
 
             if (result)
             {
+                this._cacheService.InvalidateKeys(new List<string> { $"{orderId}/items", $"{orderId}/items/history" });
                 retval = this.Ok();
             }
             else
@@ -357,17 +434,27 @@ namespace om_svc_order.Controllers
         {
             IActionResult retval;
 
-            // verify order exists
-            var order = this._context.Orders.FirstOrDefault(o => o.Id == orderId);
+            var cacheList = _cacheService.GetData<IEnumerable<OrderItem>>(key: $"{orderId}/items");
 
-            if(order == null) 
+            if (cacheList != null)
             {
-                retval = this.BadRequest("Order does not exist");
+                retval = this.Ok(cacheList);
             }
             else
-            {
-                var orderItems = await this._context.OrderItems.Where(o => o.OrderId == orderId).ToListAsync();
-                retval = this.Ok(orderItems);
+            { 
+                // verify order exists
+                var order = this._context.Orders.FirstOrDefault(o => o.Id == orderId);
+
+                if (order == null)
+                {
+                    retval = this.BadRequest("Order does not exist");
+                }
+                else
+                {
+                    var orderItems = await this._context.OrderItems.Where(o => o.OrderId == orderId).ToListAsync();
+                    this._cacheService.SetData($"{orderId}/items", orderItems, 10);
+                    retval = this.Ok(orderItems);
+                }
             }
 
             return retval;
@@ -379,14 +466,28 @@ namespace om_svc_order.Controllers
         {
             IActionResult retval;
 
-            List<OrderItemHistory> itemHistory = new();
+            var cacheList = _cacheService.GetData<IEnumerable<OrderItem>>(key: $"{orderId}/items/history");
 
-            itemHistory = await this._context.OrderItemHistory
-                .Where(h => h.OrderId == orderId)
-                .OrderByDescending(i => i.ChangedDate)
-                .ToListAsync();
+            if (cacheList != null)
+            {
+                retval = this.Ok(cacheList);
+            }
+            else
+            {
+                List<OrderItemHistory> itemHistory = new();
 
-            retval = this.Ok(itemHistory);
+                itemHistory = await this._context.OrderItemHistory
+                    .Where(h => h.OrderId == orderId)
+                    .OrderByDescending(i => i.ChangedDate)
+                    .ToListAsync();
+
+                if(itemHistory.Count > 0)
+                {
+                    this._cacheService.SetData($"{orderId}/items/history", itemHistory, 10);
+                }
+
+                retval = this.Ok(itemHistory);
+            }
 
             return retval;
         }
@@ -397,15 +498,25 @@ namespace om_svc_order.Controllers
         {
             ActionResult retval;
 
-            var eventList = await this._context.EventTypes.OrderBy(e => e.Name).ToListAsync();
+            var cacheList = _cacheService.GetData<IEnumerable<EventType>>(key: "eventTypes");
 
-            if (!eventList.Any() || eventList.Count == 0)
+            if (cacheList != null)
             {
-                retval = this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to find event types");
+                retval = this.Ok(cacheList);
             }
             else
             {
-                retval = Ok(eventList);
+                var eventList = await this._context.EventTypes.OrderBy(e => e.Name).ToListAsync();
+
+                if (!eventList.Any() || eventList.Count == 0)
+                {
+                    retval = this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to find event types");
+                }
+                else
+                {
+                    this._cacheService.SetData("eventTypes", eventList, 10);
+                    retval = Ok(eventList);
+                }
             }
 
             return retval;
@@ -429,6 +540,7 @@ namespace om_svc_order.Controllers
             }
             else
             {
+                this._cacheService.InvalidateKeys(new List<string> { "eventTypes" });
                 retval = Ok(eventType);
             }
 
@@ -451,7 +563,15 @@ namespace om_svc_order.Controllers
             {
                 this._context.EventTypes.Remove(type);
 
-                retval = await this._context.SaveChangesAsync() > 0 ? this.Ok() : this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to delete event type");
+                if(await this._context.SaveChangesAsync() > 0)
+                {
+                    this._cacheService.InvalidateKeys(new List<string> { "eventTypes" });
+                    retval = this.Ok();
+                }
+                else
+                {
+                    retval = this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to delete event type");
+                }
             }
 
             return retval;
