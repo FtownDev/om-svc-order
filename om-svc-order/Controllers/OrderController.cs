@@ -6,7 +6,6 @@ using om_svc_order.Models;
 using om_svc_order.Services;
 using StackExchange.Redis;
 using System.Net;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace om_svc_order.Controllers
 {
@@ -29,7 +28,7 @@ namespace om_svc_order.Controllers
         {
             ActionResult retval;
 
-            var cacheList = _cacheService.GetData<IEnumerable<Order>>(key: $"all{pageSize}/{currentNumber}");
+            var cacheList = _cacheService.GetData<IEnumerable<Models.Order>>(key: $"all{pageSize}/{currentNumber}");
 
             if (cacheList != null)
             {
@@ -71,7 +70,7 @@ namespace om_svc_order.Controllers
         {
             ActionResult retval;
 
-            var cacheList = _cacheService.GetData<IEnumerable<Order>>(key: $"{customerId}");
+            var cacheList = _cacheService.GetData<IEnumerable<Models.Order>>(key: $"{customerId}");
 
             if (cacheList != null)
             {
@@ -104,7 +103,7 @@ namespace om_svc_order.Controllers
         {
             ActionResult retval;
 
-            var cacheList = _cacheService.GetData<IEnumerable<Order>>(key: $"date/{date}");
+            var cacheList = _cacheService.GetData<IEnumerable<Models.Order>>(key: $"date/{date}");
 
             if (cacheList != null)
             {
@@ -143,7 +142,7 @@ namespace om_svc_order.Controllers
             }
             else
             {
-                var cacheList = _cacheService.GetData<IEnumerable<Order>>(key: $"dates/{startDate}-{endDate}");
+                var cacheList = _cacheService.GetData<IEnumerable<Models.Order>>(key: $"dates/{startDate}-{endDate}");
 
                 if (cacheList != null)
                 {
@@ -205,7 +204,7 @@ namespace om_svc_order.Controllers
         }
 
         [HttpPut]
-        public async Task<IActionResult> UpadateOrder([FromBody] Order updatedOrder, [FromQuery] Guid userId)
+        public async Task<IActionResult> UpadateOrder([FromBody] Models.Order updatedOrder, [FromQuery] Guid userId)
         {
             IActionResult retval;
             bool result = false;
@@ -274,7 +273,7 @@ namespace om_svc_order.Controllers
         {
             IActionResult retval;
 
-            var cacheList = _cacheService.GetData<IEnumerable<Order>>(key: $"{orderId}/history");
+            var cacheList = _cacheService.GetData<IEnumerable<Models.Order>>(key: $"{orderId}/history");
 
             if (cacheList != null)
             {
