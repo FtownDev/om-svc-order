@@ -28,7 +28,7 @@ namespace om_svc_order.Controllers
         {
             ActionResult retval;
 
-            var cacheList = _cacheService.GetData<IEnumerable<Models.Order>>(key: $"all{pageSize}/{currentNumber}");
+            var cacheList = _cacheService.GetData<OrderRetrieveResponse>(key: $"all{pageSize}/{currentNumber}");
 
             if (cacheList != null)
             {
@@ -273,7 +273,7 @@ namespace om_svc_order.Controllers
         {
             IActionResult retval;
 
-            var cacheList = _cacheService.GetData<IEnumerable<Models.Order>>(key: $"{orderId}/history");
+            var cacheList = _cacheService.GetData<IEnumerable<OrderHistory>>(key: $"{orderId}/history");
 
             if (cacheList != null)
             {
@@ -465,7 +465,7 @@ namespace om_svc_order.Controllers
         {
             IActionResult retval;
 
-            var cacheList = _cacheService.GetData<IEnumerable<OrderItem>>(key: $"{orderId}/items/history");
+            var cacheList = _cacheService.GetData<IEnumerable<OrderItemHistory>>(key: $"{orderId}/items/history");
 
             if (cacheList != null)
             {
