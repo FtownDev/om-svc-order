@@ -23,6 +23,36 @@ namespace om_svc_order.Controllers
         }
 
         [HttpGet]
+        [Route("{orderId}")]
+        public async Task<IActionResult> GetOrderById([FromRoute] Guid orderId)
+        {
+            ActionResult retval;
+
+            var cacheVal = _cacheService.GetData<Models.Order>(key: $"{orderId}");
+
+            if (cacheVal != null)
+            {
+                retval = this.Ok(cacheVal);
+            }
+            else
+            {
+                var order = await this._context.Orders.FirstOrDefaultAsync(f => f.Id == orderId);
+
+                if (order != null)
+                {
+                    retval = this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to find orders");
+                }
+                else
+                {
+                    _cacheService.SetData($"{orderId}", order, 10);
+                    retval = Ok(order);
+                }
+            }
+
+            return retval;
+        }
+
+        [HttpGet]
         [Route("all")]
         public async Task<IActionResult> GetAllOrders(int pageSize = 50, int currentNumber = 0)
         {
@@ -173,6 +203,7 @@ namespace om_svc_order.Controllers
             orderRequest.order.Id = Guid.NewGuid();
             orderRequest.order.EventDate = date;
             orderRequest.order.Created = DateTime.UtcNow;
+            orderRequest.order.CurrentStatus = OrderStatus.Confirmed;
 
             this._context.Orders.Add(orderRequest.order);
             List<OrderItem> orderItems = new List<OrderItem>();
