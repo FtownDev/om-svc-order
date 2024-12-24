@@ -38,7 +38,7 @@ namespace om_svc_order.Controllers
             {
                 var order = await this._context.Orders.FirstOrDefaultAsync(f => f.Id == orderId);
 
-                if (order != null)
+                if (order == null)
                 {
                     retval = this.StatusCode((int)HttpStatusCode.InternalServerError, "Unable to find orders");
                 }
