@@ -60,6 +60,7 @@ namespace om_svc_order.Data
                 {
                     foreach (var property in entry.Properties)
                     {
+                        
                         if (property.IsModified)
                         {
                             var history = new OrderHistory
@@ -70,8 +71,30 @@ namespace om_svc_order.Data
                                 ChangedFrom = property.OriginalValue?.ToString(),
                                 ChangedTo = property.CurrentValue?.ToString(),
                                 ChangedAt = now,
-                                ChangedByUserId = userId 
+                                ChangedByUserId = userId
                             };
+                            
+                            if (property.Metadata.ClrType == typeof(List<List<DateTime>>))
+                            {
+                                var originalNestedList = property.OriginalValue as List<List<DateTime>>; 
+                                var currentNestedList = property.CurrentValue as List<List<DateTime>>;
+
+                                if (originalNestedList != null && currentNestedList != null && !NestedListSequenceEqual(originalNestedList, currentNestedList))
+                                {
+                                    history = new OrderHistory
+                                    {
+                                        Id = Guid.NewGuid(),
+                                        OrderId = entry.Entity.Id,
+                                        PropertyName = property.Metadata.Name,
+                                        ChangedFrom = string.Join("; ", originalNestedList.Select(l => string.Join(", ", l.Select(d => d.ToString("o"))))),
+                                        ChangedTo = string.Join("; ", currentNestedList.Select(l => string.Join(", ", l.Select(d => d.ToString("o"))))),
+                                        ChangedAt = now,
+                                        ChangedByUserId = userId
+                                    };
+                                }
+                                else continue;
+                            }
+
 
                             this.Add(history); 
                         }
@@ -80,6 +103,17 @@ namespace om_svc_order.Data
             }
 
 
+        }
+
+        private static bool NestedListSequenceEqual(List<List<DateTime>> oldNestedList, List<List<DateTime>> newNestedList) 
+        { 
+            if (oldNestedList.Count != newNestedList.Count) return false; 
+            
+            for (int i = 0; i < oldNestedList.Count; i++) 
+            { 
+                if (!oldNestedList[i].SequenceEqual(newNestedList[i])) return false; 
+            } 
+            return true; 
         }
     }
 }

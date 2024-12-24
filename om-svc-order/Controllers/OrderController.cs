@@ -250,6 +250,7 @@ namespace om_svc_order.Controllers
                 // Update Order will utilize the override TrackChanges method written in DbContext file
                 // This is because we want to track Order history changes, but dont want to manage the table and columns, etc
                 // hopefully it "just works"
+                oldOrder.Updated = DateTime.UtcNow;
                 this._context.Entry(oldOrder).CurrentValues.SetValues(updatedOrder);
                 result = await this._context.SaveChangesWithTracking(userId) > 0;
 
@@ -259,7 +260,7 @@ namespace om_svc_order.Controllers
                 }
                 else
                 {
-                    this._cacheService.InvalidateKeys(new List<string> { "all", $"date/{updatedOrder.EventDate}" });
+                    this._cacheService.InvalidateKeys(new List<string> { "all/50/0", $"date/{updatedOrder.EventDate}", $"{updatedOrder.Id}" });
                     retval = this.Ok(updatedOrder);
                 }
             }
