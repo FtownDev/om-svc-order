@@ -9,6 +9,12 @@ namespace om_svc_order.DTO
         public Guid itemId { get; set; }
 
         [Required]
+        public string itemName { get; set; }
+
+        [Required]
+        public string itemCategory { get; set; }
+
+        [Required]
         public int qty { get; set; } 
 
         [Required]

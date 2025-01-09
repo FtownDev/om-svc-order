@@ -354,12 +354,15 @@ namespace om_svc_order.Controllers
                             {
                                 Id = Guid.NewGuid(),
                                 ChangedByUserId = userId,
+                                ChangedByUserName = "Bob Smith",
                                 ItemId = item.itemId,
                                 ChangedDate = DateTime.UtcNow,
                                 ChangeType = item.changeType,
                                 OldQuantity = existingItem.Qty,
                                 NewQuantity = item.qty,
                                 OrderId = orderId,
+                                ItemCategory = item.itemCategory,
+                                ItemName = item.itemName,
                             };
 
                             existingItem.Qty = item.qty;
@@ -384,12 +387,15 @@ namespace om_svc_order.Controllers
                         {
                             Id = Guid.NewGuid(),
                             ChangedByUserId = userId,
+                            ChangedByUserName = "Alice Johnson",
                             ItemId = item.itemId,
                             ChangedDate = DateTime.UtcNow,
                             ChangeType = item.changeType,
                             OldQuantity = 0,
                             NewQuantity = item.qty,
                             OrderId = orderId,
+                            ItemName= item.itemName,
+                            ItemCategory = item.itemCategory
                         };
 
                         itemHistory.Add(addHistory);
@@ -405,12 +411,15 @@ namespace om_svc_order.Controllers
                             {
                                 Id = Guid.NewGuid(),
                                 ChangedByUserId = userId,
+                                ChangedByUserName = "Joe Miller",
                                 ItemId = item.itemId,
                                 ChangedDate = DateTime.UtcNow,
                                 ChangeType = item.changeType,
                                 OldQuantity = itemToDelete.Qty,
                                 NewQuantity = 0,
                                 OrderId = orderId,
+                                ItemCategory = item.itemCategory,
+                                ItemName = item.itemName,
                             };
 
                             itemHistory.Add(deleteHistory);
