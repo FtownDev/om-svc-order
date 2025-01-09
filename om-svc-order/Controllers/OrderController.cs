@@ -4,7 +4,6 @@ using om_svc_order.Data;
 using om_svc_order.DTO;
 using om_svc_order.Models;
 using om_svc_order.Services;
-using StackExchange.Redis;
 using System.Net;
 
 namespace om_svc_order.Controllers
@@ -227,7 +226,7 @@ namespace om_svc_order.Controllers
             }
             else
             {
-                _cacheService.InvalidateKeys(new List<string> { "all", $"date/{orderRequest.order.EventDate}" });
+                await _cacheService.InvalidateKeys(new List<string> { "all", $"date/{orderRequest.order.EventDate}" });
                 retval = Ok(orderRequest.order);
             }
 
@@ -260,7 +259,7 @@ namespace om_svc_order.Controllers
                 }
                 else
                 {
-                    this._cacheService.InvalidateKeys(new List<string> { "all/50/0", $"date/{updatedOrder.EventDate}", $"{updatedOrder.Id}" });
+                    await this._cacheService.InvalidateKeys(new List<string> { "all", $"date/{updatedOrder.EventDate}", $"{updatedOrder.Id}" });
                     retval = this.Ok(updatedOrder);
                 }
             }
@@ -287,7 +286,7 @@ namespace om_svc_order.Controllers
 
                 if(await this._context.SaveChangesAsync() > 0)
                 {
-                    this._cacheService.InvalidateKeys(new List<string> { "all", $"date/{date}" });
+                    await this._cacheService.InvalidateKeys(new List<string> { "all", $"date/{date}" });
                     retval = this.Ok();
                 }
                 else
@@ -446,7 +445,7 @@ namespace om_svc_order.Controllers
 
             if (result)
             {
-                this._cacheService.InvalidateKeys(new List<string> { $"{orderId}/items", $"{orderId}/items/history" });
+                await this._cacheService.InvalidateKeys(new List<string> { $"{orderId}/items", $"{orderId}/items/history" });
                 retval = this.Ok();
             }
             else
@@ -571,7 +570,7 @@ namespace om_svc_order.Controllers
             }
             else
             {
-                this._cacheService.InvalidateKeys(new List<string> { "eventTypes" });
+                await this._cacheService.InvalidateKeys(new List<string> { "eventTypes" });
                 retval = Ok(eventType);
             }
 
@@ -596,7 +595,7 @@ namespace om_svc_order.Controllers
 
                 if(await this._context.SaveChangesAsync() > 0)
                 {
-                    this._cacheService.InvalidateKeys(new List<string> { "eventTypes" });
+                    await this._cacheService.InvalidateKeys(new List<string> { "eventTypes" });
                     retval = this.Ok();
                 }
                 else

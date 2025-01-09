@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using om_svc_order.Data;
 using om_svc_order.Services;
+using StackExchange.Redis;
 
 namespace om_svc_order
 {
@@ -24,11 +25,22 @@ namespace om_svc_order
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen();
 
+            var redisConnection = Configuration.GetConnectionString("RedisCache");
+            if (redisConnection == null)
+            {
+                throw new NullReferenceException("Cannot find Redis Connection string ");
+            }
+
             services.AddStackExchangeRedisCache(options =>
             {
                 options.Configuration = Configuration.GetConnectionString("RedisCache");
+                options.Configuration = redisConnection;
                 options.InstanceName = "Orders_";
             });
+
+            var redisConfiguration = ConfigurationOptions.Parse(redisConnection);
+
+            services.AddSingleton<IConnectionMultiplexer>(sp => ConnectionMultiplexer.Connect(redisConfiguration));
 
             services.AddScoped<ICacheService, RedisCacheService>();
         }
