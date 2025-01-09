@@ -34,21 +34,31 @@ namespace om_svc_order.Models
         [Column(TypeName = "decimal(10,2)")]
         public decimal BalanceDue { get; set; }
 
-        [Required]
-        [Column(TypeName = "decimal(3,2)")]
-        public decimal TaxRate { get; set; }
+        public List<List<DateTime>>? DeliveryWindow { get; set; } 
 
-        public List<List<DateTime>> DeliveryWindow { get; set; } 
+        public List<List<DateTime>>? PickupWindow { get; set; }
 
-        public List<List<DateTime>> PickupWindow { get; set; }
-
-        public string DeliveryPickupNotes { get; set; }
+        public string? DeliveryPickupNotes { get; set; }
 
         [Column(TypeName = "decimal(10,2)")]
         public decimal Deposit { get; set; }
 
         [Column(TypeName = "decimal(10,2)")]
         public decimal Discount { get; set; }
+
+        [Column(TypeName = "decimal(10,2)")]
+        public decimal ItemTotalValue { get; set; }
+
+        [Column(TypeName = "decimal(10,2)")]
+        public decimal ShippingCost { get; set; }
+
+        [Required]
+        [Column(TypeName = "decimal(3,2)")]
+        public decimal TaxRate { get; set; }
+
+        [Required]
+        [Column(TypeName = "decimal(10,2)")]
+        public decimal TaxValue { get; set; }
 
         public OrderStatus CurrentStatus { get; set; }
 
