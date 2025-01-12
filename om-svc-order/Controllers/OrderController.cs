@@ -214,6 +214,9 @@ namespace om_svc_order.Controllers
                     OrderId = orderRequest.order.Id,
                     ItemId = item.ItemId,
                     Qty = item.Qty,
+                    ItemCategory = item.ItemCategory,
+                    ItemName = item.ItemName,
+                    Price = item.Price
                 });
             }
 
@@ -381,6 +384,9 @@ namespace om_svc_order.Controllers
                             ItemId = item.itemId,
                             OrderId = orderId,
                             Qty = item.qty,
+                            ItemCategory = item.itemCategory,
+                            ItemName  = item.itemName,
+                            Price = item.price
                         };
                         itemsToAdd.Add(newItem);
                         var addHistory = new OrderItemHistory
@@ -395,7 +401,7 @@ namespace om_svc_order.Controllers
                             NewQuantity = item.qty,
                             OrderId = orderId,
                             ItemName= item.itemName,
-                            ItemCategory = item.itemCategory
+                            ItemCategory = item.itemCategory,
                         };
 
                         itemHistory.Add(addHistory);

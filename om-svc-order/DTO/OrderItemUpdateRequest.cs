@@ -15,9 +15,13 @@ namespace om_svc_order.DTO
         public string itemCategory { get; set; }
 
         [Required]
-        public int qty { get; set; } 
+        public int qty { get; set; }
+
+        [Required]
+        public decimal price { get; set; }
 
         [Required]
         public OrderItemChangeType changeType { get; set; }
+
     }
 }
